@@ -1,0 +1,46 @@
+.github/workflows/build.yml
+name: Build Desktop Apps
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build web (PWA)
+        working-directory: ./web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Copy web/dist into desktop/app
+        run: |
+          mkdir -p desktop/app
+          cp -r web/dist/* desktop/app/
+
+      - name: Install desktop deps
+        working-directory: ./desktop
+        run: npm ci
+
+      - name: Build installers
+        working-directory: ./desktop
+        run: npm run dist
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: DailyBoost-${{ runner.os }}
+          path: desktop/release/**
